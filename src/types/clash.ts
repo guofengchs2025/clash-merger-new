@@ -49,6 +49,8 @@ export interface GeneralSettings {
 export interface MergeOptions {
   strategy: MergeStrategy;
   generalSettings: GeneralSettings;
+  customRuleProviders?: Record<string, unknown>;
+  customRules?: string[];
 }
 
 export interface MergeStats {

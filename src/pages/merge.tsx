@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { parseClashYaml } from '@/lib/merge/parser';
 import { mergeConfigs } from '@/lib/merge/engine';
 import { getRegionDistribution } from '@/lib/merge/groups';
+import { loadRuleProviders, buildRuleProvidersConfig } from '@/lib/providers/store';
 import type { MergeStrategy, MergeResult, SourceInput, RuleMode } from '@/types/clash';
 
 interface ParsedSourceInfo {
@@ -132,7 +133,7 @@ export function MergePage() {
     setSources((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleMerge = () => {
+  const handleMerge = async () => {
     try {
       const sourceInputs: SourceInput[] = sources.map((s) => ({
         name: s.name,
@@ -141,9 +142,22 @@ export function MergePage() {
         url: s.url,
       }));
 
+      // 读取最新存储在 KV/store 中的自定义 rule-providers
+      let customRuleProviders: Record<string, unknown> | undefined;
+      let customRules: string[] | undefined;
+
+      if (ruleMode === 'rule-set') {
+        const { list } = await loadRuleProviders();
+        const built = buildRuleProvidersConfig(list);
+        customRuleProviders = built.providers;
+        customRules = built.rules;
+      }
+
       const result = mergeConfigs(sourceInputs, {
         strategy,
         generalSettings: { mixedPort, allowLan, mode, logLevel, ruleMode },
+        customRuleProviders,
+        customRules,
       });
 
       setMergeResult(result);
@@ -464,13 +478,12 @@ export function MergePage() {
 
             <Separator className="my-4" />
 
-            {/* 规则格式模式选择 (Rule Providers vs Inline) */}
             <Card className="p-5 sm:p-6 glass border-border/30 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold text-base">路由规则模式 (Rule Mode)</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    推荐选择 Rule Providers 模式，体积精简且规则在线自动同步
+                    支持读取用户在云端 KV 自定义的规则集配置
                   </p>
                 </div>
               </div>
@@ -497,7 +510,7 @@ export function MergePage() {
                       <Badge variant="secondary" className="text-[10px] px-1.5 py-0">推荐</Badge>
                     </div>
                     <div className="text-xs opacity-70 mt-1 leading-relaxed">
-                      生成 <code className="font-mono text-primary">rule-providers</code> (.mrs 高性能二进制规则集)，体积微小且规则自动在线更新。
+                      自动加载云端 KV / 本地存储的自定义规则集（可以在 /providers 页面自由管理编辑）。
                     </div>
                   </div>
                 </label>
@@ -527,7 +540,6 @@ export function MergePage() {
               </div>
             </Card>
 
-            {/* General settings */}
             <Card className="p-5 sm:p-6 glass border-border/30">
               <h3 className="font-semibold mb-4">通用设置</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

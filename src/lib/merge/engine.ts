@@ -9,7 +9,7 @@ export function mergeConfigs(
   sourceInputs: SourceInput[],
   options: MergeOptions
 ): MergeResult {
-  const { strategy, generalSettings } = options;
+  const { strategy, generalSettings, customRuleProviders, customRules } = options;
   const ruleMode = generalSettings.ruleMode || 'rule-set';
 
   // 1. 解析所有来源
@@ -46,7 +46,13 @@ export function mergeConfigs(
     'REJECT',
   ]);
   const sourceRules = parsedSources.map((s) => s.config.rules || []);
-  const rules = mergeRules(strategy, sourceRules, validGroupNames, ruleMode);
+  let rules: string[];
+
+  if (ruleMode === 'rule-set' && customRules && customRules.length > 0) {
+    rules = [...customRules];
+  } else {
+    rules = mergeRules(strategy, sourceRules, validGroupNames, ruleMode);
+  }
 
   // 5. 组装最终配置
   const mergedConfig: ClashConfig = {
@@ -63,7 +69,7 @@ export function mergeConfigs(
 
   // 如果启用 Rule-Set 模式，注入 rule-providers 字段
   if (ruleMode === 'rule-set') {
-    mergedConfig['rule-providers'] = DEFAULT_RULE_PROVIDERS;
+    mergedConfig['rule-providers'] = customRuleProviders || DEFAULT_RULE_PROVIDERS;
   }
 
   // 6. 序列化为 YAML 字符串
