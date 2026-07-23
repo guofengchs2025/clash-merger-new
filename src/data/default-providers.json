@@ -10,43 +10,63 @@
     "interval": 86400
   },
   {
-    "key": "openai",
+    "key": "ai",
     "groupName": "🤖 OpenAI",
     "type": "http",
     "behavior": "domain",
     "format": "mrs",
-    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/openai.mrs",
-    "path": "./ruleset/openai.mrs",
+    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ai-!cn.mrs",
+    "path": "./ruleset/ai.mrs",
     "interval": 86400
   },
   {
-    "key": "telegram",
-    "groupName": "📲 Telegram",
-    "type": "http",
-    "behavior": "domain",
-    "format": "mrs",
-    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/telegram.mrs",
-    "path": "./ruleset/telegram.mrs",
-    "interval": 86400
-  },
-  {
-    "key": "youtube",
+    "key": "youtube_domain",
     "groupName": "📹 油管视频",
     "type": "http",
     "behavior": "domain",
     "format": "mrs",
     "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.mrs",
-    "path": "./ruleset/youtube.mrs",
+    "path": "./ruleset/youtube_domain.mrs",
     "interval": 86400
   },
   {
-    "key": "netflix",
+    "key": "google_domain",
+    "groupName": "🚀 节点选择",
+    "type": "http",
+    "behavior": "domain",
+    "format": "mrs",
+    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google.mrs",
+    "path": "./ruleset/google_domain.mrs",
+    "interval": 86400
+  },
+  {
+    "key": "github_domain",
+    "groupName": "🚀 节点选择",
+    "type": "http",
+    "behavior": "domain",
+    "format": "mrs",
+    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/github.mrs",
+    "path": "./ruleset/github_domain.mrs",
+    "interval": 86400
+  },
+  {
+    "key": "telegram_domain",
+    "groupName": "📲 Telegram",
+    "type": "http",
+    "behavior": "domain",
+    "format": "mrs",
+    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/telegram.mrs",
+    "path": "./ruleset/telegram_domain.mrs",
+    "interval": 86400
+  },
+  {
+    "key": "netflix_domain",
     "groupName": "🎥 奈飞视频",
     "type": "http",
     "behavior": "domain",
     "format": "mrs",
     "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/netflix.mrs",
-    "path": "./ruleset/netflix.mrs",
+    "path": "./ruleset/netflix_domain.mrs",
     "interval": 86400
   },
   {
@@ -57,6 +77,146 @@
     "format": "mrs",
     "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bilibili.mrs",
     "path": "./ruleset/bilibili.mrs",
+    "interval": 86400
+  },
+  {
+    "key": "tiktok_domain",
+    "groupName": "📺 国际媒体",
+    "type": "http",
+    "behavior": "domain",
+    "format": "mrs",
+    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tiktok.mrs",
+    "path": "./ruleset/tiktok_domain.mrs",
+    "interval": 86400
+  },
+  {
+    "key": "paypal_domain",
+    "groupName": "🚀 节点选择",
+    "type": "http",
+    "behavior": "domain",
+    "format": "mrs",
+    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/paypal.mrs",
+    "path": "./ruleset/paypal_domain.mrs",
+    "interval": 86400
+  },
+  {
+    "key": "onedrive_domain",
+    "groupName": "🎯 全球直连",
+    "type": "http",
+    "behavior": "domain",
+    "format": "mrs",
+    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/onedrive.mrs",
+    "path": "./ruleset/onedrive_domain.mrs",
+    "interval": 86400
+  },
+  {
+    "key": "microsoft_domain",
+    "groupName": "🎯 全球直连",
+    "type": "http",
+    "behavior": "domain",
+    "format": "mrs",
+    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft.mrs",
+    "path": "./ruleset/microsoft_domain.mrs",
+    "interval": 86400
+  },
+  {
+    "key": "apple_domain",
+    "groupName": "🎯 全球直连",
+    "type": "http",
+    "behavior": "domain",
+    "format": "mrs",
+    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple.mrs",
+    "path": "./ruleset/apple_domain.mrs",
+    "interval": 86400
+  },
+  {
+    "key": "speedtest_domain",
+    "groupName": "🎯 全球直连",
+    "type": "http",
+    "behavior": "domain",
+    "format": "mrs",
+    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/ookla-speedtest.mrs",
+    "path": "./ruleset/speedtest_domain.mrs",
+    "interval": 86400
+  },
+  {
+    "key": "geolocation_non_cn",
+    "groupName": "🚀 节点选择",
+    "type": "http",
+    "behavior": "domain",
+    "format": "mrs",
+    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/geolocation-!cn.mrs",
+    "path": "./ruleset/geolocation_non_cn.mrs",
+    "interval": 86400
+  },
+  {
+    "key": "cn_domain",
+    "groupName": "🎯 全球直连",
+    "type": "http",
+    "behavior": "domain",
+    "format": "mrs",
+    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cn.mrs",
+    "path": "./ruleset/cn_domain.mrs",
+    "interval": 86400
+  },
+  {
+    "key": "private_ip",
+    "groupName": "🎯 全球直连",
+    "type": "http",
+    "behavior": "ipcidr",
+    "format": "mrs",
+    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/private.mrs",
+    "path": "./ruleset/private_ip.mrs",
+    "interval": 86400
+  },
+  {
+    "key": "cn_ip",
+    "groupName": "🎯 全球直连",
+    "type": "http",
+    "behavior": "ipcidr",
+    "format": "mrs",
+    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cn.mrs",
+    "path": "./ruleset/cn_ip.mrs",
+    "interval": 86400
+  },
+  {
+    "key": "google_ip",
+    "groupName": "🚀 节点选择",
+    "type": "http",
+    "behavior": "ipcidr",
+    "format": "mrs",
+    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/google.mrs",
+    "path": "./ruleset/google_ip.mrs",
+    "interval": 86400
+  },
+  {
+    "key": "telegram_ip",
+    "groupName": "📲 Telegram",
+    "type": "http",
+    "behavior": "ipcidr",
+    "format": "mrs",
+    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/telegram.mrs",
+    "path": "./ruleset/telegram_ip.mrs",
+    "interval": 86400
+  },
+  {
+    "key": "netflix_ip",
+    "groupName": "🎥 奈飞视频",
+    "type": "http",
+    "behavior": "ipcidr",
+    "format": "mrs",
+    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/netflix.mrs",
+    "path": "./ruleset/netflix_ip.mrs",
+    "interval": 86400
+  },
+  {
+    "key": "apple_ip",
+    "groupName": "🎯 全球直连",
+    "type": "http",
+    "behavior": "ipcidr",
+    "format": "mrs",
+    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo-lite/geoip/apple.mrs",
+    "path": "./ruleset/apple_ip.mrs",
     "interval": 86400
   }
 ]
