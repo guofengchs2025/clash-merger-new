@@ -10,7 +10,8 @@ import {
 interface Env {
   AUTH_KV?: any;
   AUTH_SECRET?: string;
-  AUTH_PASSWORD_HASH?: string;
+  AUTH_PASSWORD?: string; // 明文密码 (优先)
+  AUTH_PASSWORD_HASH?: string; // SHA-256 哈希密码
 }
 
 /** 从 Request 读取指定 Cookie 值 */
@@ -76,16 +77,27 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
       );
     }
 
+    const storedPlain = env.AUTH_PASSWORD;
     const storedHash = env.AUTH_PASSWORD_HASH;
-    if (!storedHash) {
+
+    if (!storedPlain && !storedHash) {
       return new Response(
-        JSON.stringify({ error: '服务端未配置密码 AUTH_PASSWORD_HASH' }),
+        JSON.stringify({ error: '服务端未配置密码 AUTH_PASSWORD 或 AUTH_PASSWORD_HASH' }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    const inputHash = await sha256Hex(password);
-    if (inputHash !== storedHash) {
+    let isValid = false;
+    if (storedPlain) {
+      // 方式 1: 直接填写明文密码时，在边缘节点进行安全比对
+      isValid = password === storedPlain;
+    } else if (storedHash) {
+      // 方式 2: 填写哈希值时，将输入密码计算 SHA-256 后比对
+      const inputHash = await sha256Hex(password);
+      isValid = inputHash === storedHash;
+    }
+
+    if (!isValid) {
       return new Response(JSON.stringify({ error: '密码错误' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' },
