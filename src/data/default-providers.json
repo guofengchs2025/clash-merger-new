@@ -1,0 +1,62 @@
+[
+  {
+    "key": "reject",
+    "groupName": "🛑 广告拦截",
+    "type": "http",
+    "behavior": "domain",
+    "format": "mrs",
+    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ads-all.mrs",
+    "path": "./ruleset/reject.mrs",
+    "interval": 86400
+  },
+  {
+    "key": "openai",
+    "groupName": "🤖 OpenAI",
+    "type": "http",
+    "behavior": "domain",
+    "format": "mrs",
+    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/openai.mrs",
+    "path": "./ruleset/openai.mrs",
+    "interval": 86400
+  },
+  {
+    "key": "telegram",
+    "groupName": "📲 Telegram",
+    "type": "http",
+    "behavior": "domain",
+    "format": "mrs",
+    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/telegram.mrs",
+    "path": "./ruleset/telegram.mrs",
+    "interval": 86400
+  },
+  {
+    "key": "youtube",
+    "groupName": "📹 油管视频",
+    "type": "http",
+    "behavior": "domain",
+    "format": "mrs",
+    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.mrs",
+    "path": "./ruleset/youtube.mrs",
+    "interval": 86400
+  },
+  {
+    "key": "netflix",
+    "groupName": "🎥 奈飞视频",
+    "type": "http",
+    "behavior": "domain",
+    "format": "mrs",
+    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/netflix.mrs",
+    "path": "./ruleset/netflix.mrs",
+    "interval": 86400
+  },
+  {
+    "key": "bilibili",
+    "groupName": "🎬 哔哩哔哩",
+    "type": "http",
+    "behavior": "domain",
+    "format": "mrs",
+    "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bilibili.mrs",
+    "path": "./ruleset/bilibili.mrs",
+    "interval": 86400
+  }
+]

@@ -1,5 +1,5 @@
 import { verifySessionCookie } from '../../src/lib/auth/session';
-import { DEFAULT_RULE_PROVIDERS, TEMPLATE_RULESET_RULES } from '../../src/lib/merge/templates';
+import defaultProvidersData from '../../src/data/default-providers.json';
 
 interface Env {
   DATA_KV?: any;
@@ -24,7 +24,7 @@ async function checkAuth(request: Request, secret?: string): Promise<boolean> {
   return await verifySessionCookie(cookieValue, secret);
 }
 
-/** GET /api/rule-providers — 读取自定义 Rule Providers (从 KV 或默认) */
+/** GET /api/rule-providers — 读取自定义 Rule Providers (优先 KV，兜底 JSON) */
 export async function onRequestGet(context: { request: Request; env: Env }) {
   const { env } = context;
   const dataKv = env.DATA_KV;
@@ -44,13 +44,12 @@ export async function onRequestGet(context: { request: Request; env: Env }) {
     }
   }
 
-  // 默认规则集 fallback
+  // 兜底返回静态 default-providers.json 中的默认配置
   return new Response(
     JSON.stringify({
       isCustom: false,
       data: {
-        providers: DEFAULT_RULE_PROVIDERS,
-        rules: TEMPLATE_RULESET_RULES,
+        list: defaultProvidersData,
       },
     }),
     { status: 200, headers: { 'Content-Type': 'application/json' } }
