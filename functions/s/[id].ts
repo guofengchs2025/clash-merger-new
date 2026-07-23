@@ -16,22 +16,30 @@ export async function onRequestGet(context: {
 
   const dataKv = env.DATA_KV;
   if (!dataKv) {
-    return new Response('DATA_KV 未绑定，无法下载', { status: 503 });
+    return new Response('DATA_KV 未绑定，无法下载文件', { status: 503 });
   }
 
-  const [fileKey, yaml] = await Promise.all([
-    dataKv.get(`url:${id}`),
-    dataKv.get('current'),
-  ]);
+  // 1. 查询 url: 索引
+  const targetKey = await dataKv.get(`url:${id}`);
+  let yaml: string | null = null;
 
-  const targetKey = fileKey ?? 'current';
-  const finalYaml = targetKey === 'current' ? yaml : (await dataKv.get(targetKey)) ?? yaml;
-
-  if (!finalYaml) {
-    return new Response('Not Found', { status: 404 });
+  if (targetKey) {
+    yaml = await dataKv.get(targetKey);
   }
 
-  return new Response(finalYaml, {
+  // 2. Fallback: 尝试 data:id 或 current
+  if (!yaml) {
+    yaml = await dataKv.get(`data:${id}`);
+  }
+  if (!yaml && id === 'current') {
+    yaml = await dataKv.get('current');
+  }
+
+  if (!yaml) {
+    return new Response('短链接对应的内容不存在或已过期', { status: 404 });
+  }
+
+  return new Response(yaml, {
     status: 200,
     headers: {
       'Content-Type': 'text/yaml; charset=utf-8',

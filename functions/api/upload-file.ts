@@ -28,7 +28,6 @@ function getCookie(request: Request, name: string): string | null {
 export async function onRequestPost(context: { request: Request; env: Env }) {
   const { request, env } = context;
   try {
-    // 鉴权
     if (!env.AUTH_SECRET) {
       return new Response(JSON.stringify({ error: '服务端未配置 AUTH_SECRET' }), {
         status: 500,
@@ -55,12 +54,12 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
     const dataKv = env.DATA_KV;
     if (!dataKv) {
       return new Response(
-        JSON.stringify({ error: 'DATA_KV 未配置，无法保存到云端' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'DATA_KV 未绑定，无法保存到云端' }),
+        { status: 503, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    const body = (await request.json()) as { yaml?: string };
+    const body = (await request.json()) as { yaml?: string; targetShortId?: string };
     if (!body.yaml || typeof body.yaml !== 'string') {
       return new Response(JSON.stringify({ error: 'yaml 内容缺失' }), {
         status: 400,
@@ -74,13 +73,57 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
       });
     }
 
-    const shortId = generateShortId(6);
+    const now = Date.now();
+    let finalShortId: string;
+    let dataKey: string;
+    let createdAt = now;
+
+    if (body.targetShortId && typeof body.targetShortId === 'string') {
+      // 模式 1: 覆盖已有短链接内容，URL 保持不变
+      finalShortId = body.targetShortId.trim();
+      const existingTargetKey = await dataKv.get(`url:${finalShortId}`);
+
+      if (existingTargetKey) {
+        dataKey = existingTargetKey;
+      } else {
+        dataKey = `data:${finalShortId}`;
+      }
+
+      // 更新数据
+      await dataKv.put(dataKey, body.yaml);
+
+      // 保留原本的 createdAt 时间戳
+      const { keys } = await dataKv.list({ prefix: `url:${finalShortId}` });
+      if (keys && keys.length > 0 && keys[0].metadata?.createdAt) {
+        createdAt = keys[0].metadata.createdAt;
+      }
+
+      // 更新 url: 的索引与 metadata
+      await dataKv.put(`url:${finalShortId}`, dataKey, {
+        metadata: {
+          targetKey: dataKey,
+          createdAt,
+          updatedAt: now,
+        },
+      });
+    } else {
+      // 模式 2: 新建全新 6 位短 ID
+      finalShortId = generateShortId(6);
+      dataKey = `data:${finalShortId}`;
+
+      await dataKv.put(dataKey, body.yaml);
+      await dataKv.put(`url:${finalShortId}`, dataKey, {
+        metadata: {
+          targetKey: dataKey,
+          createdAt: now,
+          updatedAt: now,
+        },
+      });
+    }
+
+    // 同时更新全局 latest/current
     await dataKv.put('current', body.yaml, {
-      metadata: { savedAt: Date.now() },
-    });
-    await dataKv.put(`url:${shortId}`, 'current', {
-      metadata: { createdAt: Date.now() },
-      expirationTtl: 60 * 60 * 24 * 7, // 短 URL 7 天后自动清理
+      metadata: { savedAt: now, lastShortId: finalShortId },
     });
 
     const urlObj = new URL(request.url);
@@ -89,8 +132,9 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
     return new Response(
       JSON.stringify({
         ok: true,
-        shortId,
-        url: `${baseUrl}/s/${shortId}`,
+        shortId: finalShortId,
+        isOverwrite: Boolean(body.targetShortId),
+        url: `${baseUrl}/s/${finalShortId}`,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );

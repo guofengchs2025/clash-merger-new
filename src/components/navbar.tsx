@@ -39,6 +39,14 @@ export function Navbar() {
           >
             地区规则
           </Link>
+          <Link
+            href="/links"
+            className={`text-sm transition-colors hover:text-foreground ${
+              location === '/links' ? 'text-foreground font-semibold' : 'text-muted-foreground'
+            }`}
+          >
+            🔗 链接管理
+          </Link>
         </nav>
 
         <div className="flex items-center gap-2">

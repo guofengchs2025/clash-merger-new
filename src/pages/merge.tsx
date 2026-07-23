@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -8,10 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import {
-  Select,
-  SelectItem,
-} from '@/components/ui/select';
+import { Select, SelectItem } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { parseClashYaml } from '@/lib/merge/parser';
 import { mergeConfigs } from '@/lib/merge/engine';
@@ -27,6 +24,12 @@ interface ParsedSourceInfo {
   regionDistribution: Record<string, number>;
 }
 
+interface ShortLinkItem {
+  shortId: string;
+  url: string;
+  updatedAt: number | null;
+}
+
 export function MergePage() {
   const [step, setStep] = useState(1);
   const [sources, setSources] = useState<ParsedSourceInfo[]>([]);
@@ -40,6 +43,11 @@ export function MergePage() {
   const [fetchingUrl, setFetchingUrl] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [configName, setConfigName] = useState('');
+  
+  // 云端保存 & 覆盖已有短链接
+  const [saveMode, setSaveMode] = useState<'new' | 'overwrite'>('new');
+  const [existingLinks, setExistingLinks] = useState<ShortLinkItem[]>([]);
+  const [selectedOverwriteId, setSelectedOverwriteId] = useState<string>('');
   const [savingToCloud, setSavingToCloud] = useState(false);
   const [cloudUrl, setCloudUrl] = useState('');
   const [cloudShortId, setCloudShortId] = useState('');
@@ -72,7 +80,6 @@ export function MergePage() {
     }
   }, []);
 
-  // 拖拽
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
@@ -82,7 +89,6 @@ export function MergePage() {
     [handleFiles]
   );
 
-  // 订阅链接拉取（使用 Cloudflare Native Pages Function `/api/fetch-sub`）
   const handleFetchUrl = async () => {
     if (!subUrl.trim()) return;
     setFetchingUrl(true);
@@ -98,7 +104,6 @@ export function MergePage() {
         return;
       }
 
-      // 浏览器端解析
       const config = parseClashYaml(data.content);
       const regionDist = getRegionDistribution(config.proxies);
       const urlName = new URL(subUrl).hostname;
@@ -123,12 +128,10 @@ export function MergePage() {
     }
   };
 
-  // 删除来源
   const removeSource = (index: number) => {
     setSources((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // 浏览器端执行合并
   const handleMerge = () => {
     try {
       const sourceInputs: SourceInput[] = sources.map((s) => ({
@@ -148,12 +151,28 @@ export function MergePage() {
       setCloudUrl('');
       setCloudShortId('');
       toast.success('合并成功！');
+      fetchExistingLinks();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '合并失败');
     }
   };
 
-  // 下载
+  // 获取可覆盖的短链接列表
+  const fetchExistingLinks = async () => {
+    try {
+      const res = await fetch('/api/short-links', { cache: 'no-store' });
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.links)) {
+        setExistingLinks(data.links);
+        if (data.links.length > 0) {
+          setSelectedOverwriteId(data.links[0].shortId);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  };
+
   const handleDownload = () => {
     if (!mergeResult) return;
     const blob = new Blob([mergeResult.yaml], { type: 'text/yaml' });
@@ -165,15 +184,22 @@ export function MergePage() {
     URL.revokeObjectURL(url);
   };
 
-  // 保存到云端（DATA_KV），生成短链接
+  // 保存到云端（支持新建或指定覆盖）
   const handleSaveToCloud = async () => {
     if (!mergeResult) return;
     setSavingToCloud(true);
     try {
+      const payload: { yaml: string; targetShortId?: string } = {
+        yaml: mergeResult.yaml,
+      };
+      if (saveMode === 'overwrite' && selectedOverwriteId) {
+        payload.targetShortId = selectedOverwriteId;
+      }
+
       const res = await fetch('/api/upload-file', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ yaml: mergeResult.yaml }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -182,7 +208,12 @@ export function MergePage() {
       }
       setCloudUrl(data.url);
       setCloudShortId(data.shortId);
-      toast.success('已保存到云端');
+      if (data.isOverwrite) {
+        toast.success(`短链接 ${data.shortId} 已更新，URL 保持不变！`);
+      } else {
+        toast.success('全新短链接创建成功！');
+      }
+      fetchExistingLinks();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : '网络错误');
     } finally {
@@ -248,7 +279,6 @@ export function MergePage() {
               </p>
             </div>
 
-            {/* Upload area */}
             <Card
               className={`border-2 border-dashed transition-all duration-200 ${
                 dragOver
@@ -290,7 +320,6 @@ export function MergePage() {
               </div>
             </Card>
 
-            {/* URL input */}
             <Card className="p-4 sm:p-5 glass border-border/30">
               <Label className="text-sm font-medium mb-2 block">
                 🔗 订阅链接
@@ -315,7 +344,6 @@ export function MergePage() {
               </div>
             </Card>
 
-            {/* Sources list */}
             {sources.length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -438,7 +466,6 @@ export function MergePage() {
 
             <Separator className="my-4" />
 
-            {/* General settings */}
             <Card className="p-5 sm:p-6 glass border-border/30">
               <h3 className="font-semibold mb-4">通用设置</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -501,17 +528,16 @@ export function MergePage() {
           </div>
         )}
 
-        {/* Step 3: 预览结果 */}
+        {/* Step 3: 预览结果 & 云端保存/覆盖 */}
         {step === 3 && mergeResult && (
           <div className="space-y-6">
             <div>
               <h2 className="text-xl sm:text-2xl font-bold mb-2">合并结果</h2>
               <p className="text-sm text-muted-foreground">
-                预览合并后的配置，下载或上传生成订阅链接
+                预览合并后的配置，下载或保存到云端短链接
               </p>
             </div>
 
-            {/* Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
                 { label: '原始节点', value: mergeResult.stats.totalProxies, icon: '📊' },
@@ -527,7 +553,6 @@ export function MergePage() {
               ))}
             </div>
 
-            {/* Tabs */}
             <Card className="glass border-border/30">
               <Tabs defaultValue="distribution" className="w-full">
                 <TabsList className="w-full justify-start rounded-none border-b border-border/30 bg-transparent h-auto p-0">
@@ -578,11 +603,11 @@ export function MergePage() {
               </Tabs>
             </Card>
 
-            {/* 下载区域 */}
+            {/* 本地下载 */}
             <Card className="p-4 sm:p-5 glass border-border/30">
               <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
                 <div className="flex-1 space-y-2">
-                  <Label className="text-sm">配置名称（仅用于本地下载文件名）</Label>
+                  <Label className="text-sm">配置名称（本地下载文件名）</Label>
                   <Input
                     placeholder="例如: my-merged-config"
                     value={configName}
@@ -595,37 +620,126 @@ export function MergePage() {
                   onClick={handleDownload}
                   className="shrink-0 cursor-pointer"
                 >
-                  📥 下载
+                  📥 下载本地文件
                 </Button>
               </div>
             </Card>
 
-            {/* 保存到云端 + 短链接分享 */}
-            <Card className="p-4 sm:p-5 glass border-border/30 space-y-3">
-              <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
-                <div className="flex-1 space-y-1">
-                  <Label className="text-sm">保存到云端（Cloudflare KV）</Label>
-                  <p className="text-xs text-muted-foreground">
-                    把合并结果写入 DATA_KV，并生成一条短 URL。收到链接的人打开即可下载这份 YAML。
-                  </p>
-                </div>
-                <Button
-                  onClick={handleSaveToCloud}
-                  disabled={savingToCloud}
-                  className="shrink-0 cursor-pointer"
-                >
-                  {savingToCloud ? '上传中…' : '☁️ 保存并生成短 URL'}
-                </Button>
+            {/* 保存到云端 / 覆盖已有短链接 */}
+            <Card className="p-5 glass border-border/30 space-y-4">
+              <div>
+                <h3 className="font-semibold text-base flex items-center gap-2">
+                  <span>☁️</span>
+                  <span>保存并生成/更新短链接</span>
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  选择新建全新的短链接，或勾选已有短链接进行覆盖更新（保持 URL 链接不变）。
+                </p>
               </div>
 
+              {/* 保存模式选项 */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label
+                  onClick={() => setSaveMode('new')}
+                  className={`p-3 rounded-lg border flex items-center gap-3 cursor-pointer transition-all ${
+                    saveMode === 'new'
+                      ? 'border-primary bg-primary/10 text-foreground'
+                      : 'border-border/40 hover:bg-muted/50 text-muted-foreground'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="saveMode"
+                    checked={saveMode === 'new'}
+                    onChange={() => setSaveMode('new')}
+                    className="accent-primary"
+                  />
+                  <div>
+                    <div className="font-medium text-sm">✨ 新建短链接</div>
+                    <div className="text-xs opacity-70">生成随机 6 位 ID 的全新分享链接</div>
+                  </div>
+                </label>
+
+                <label
+                  onClick={() => {
+                    if (existingLinks.length === 0) {
+                      toast.error('当前云端暂无可覆盖的短链接');
+                      return;
+                    }
+                    setSaveMode('overwrite');
+                  }}
+                  className={`p-3 rounded-lg border flex items-center gap-3 cursor-pointer transition-all ${
+                    saveMode === 'overwrite'
+                      ? 'border-primary bg-primary/10 text-foreground'
+                      : 'border-border/40 hover:bg-muted/50 text-muted-foreground'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="saveMode"
+                    checked={saveMode === 'overwrite'}
+                    onChange={() => setSaveMode('overwrite')}
+                    disabled={existingLinks.length === 0}
+                    className="accent-primary"
+                  />
+                  <div>
+                    <div className="font-medium text-sm">🔄 覆盖现有短链接</div>
+                    <div className="text-xs opacity-70">
+                      {existingLinks.length > 0
+                        ? `选定已有的短链接进行覆盖 (共 ${existingLinks.length} 条)`
+                        : '云端无已有短链接'}
+                    </div>
+                  </div>
+                </label>
+              </div>
+
+              {/* 覆盖模式选择列表 */}
+              {saveMode === 'overwrite' && existingLinks.length > 0 && (
+                <div className="p-3 rounded-lg bg-background/50 border border-border/40 space-y-2">
+                  <Label className="text-xs font-semibold">选择要覆盖的短链接 ID：</Label>
+                  <Select
+                    value={selectedOverwriteId}
+                    onValueChange={(v) => setSelectedOverwriteId(v)}
+                  >
+                    {existingLinks.map((item) => (
+                      <SelectItem key={item.shortId} value={item.shortId}>
+                        id: {item.shortId} ({item.url})
+                      </SelectItem>
+                    ))}
+                  </Select>
+                  <p className="text-[11px] font-mono text-emerald-400 pt-1">
+                    提示：覆盖后原链接字符串保持不变，任何已订阅该 URL 的设备将获取到最新 YAML 配置。
+                  </p>
+                </div>
+              )}
+
+              <Button
+                onClick={handleSaveToCloud}
+                disabled={savingToCloud}
+                className="w-full cursor-pointer"
+              >
+                {savingToCloud
+                  ? '提交保存中…'
+                  : saveMode === 'overwrite'
+                  ? `🔄 确认覆盖短链接 (${selectedOverwriteId})`
+                  : '☁️ 确认生成新短链接'}
+              </Button>
+
               {cloudUrl && (
-                <div className="space-y-2 pt-2 border-t border-border/30">
-                  <Label className="text-xs text-muted-foreground">分享链接</Label>
+                <div className="space-y-2 pt-3 border-t border-border/30">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs text-muted-foreground">
+                      {saveMode === 'overwrite' ? '已更新的原短链接 URL' : '生成的短链接 URL'}
+                    </Label>
+                    <Badge variant="outline" className="text-xs font-mono">
+                      id: {cloudShortId}
+                    </Badge>
+                  </div>
                   <div className="flex gap-2">
                     <Input
                       readOnly
                       value={cloudUrl}
-                      className="bg-background/40 font-mono text-xs"
+                      className="bg-background/40 font-mono text-xs text-primary"
                     />
                     <Button
                       onClick={copyCloudUrl}
@@ -635,9 +749,6 @@ export function MergePage() {
                       📋 复制
                     </Button>
                   </div>
-                  <p className="text-[11px] text-muted-foreground">
-                    短 id: <code className="font-mono">{cloudShortId}</code> —— 指向 DATA_KV.current
-                  </p>
                 </div>
               )}
             </Card>
