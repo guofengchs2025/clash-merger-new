@@ -1,0 +1,44 @@
+[
+  {
+    "name": "香港节点",
+    "emoji": "🇭🇰",
+    "keywords": "(?:香港|Hong\\s*Kong|HK|HongKong|Hong-Kong)",
+    "flags": "i"
+  },
+  {
+    "name": "台湾节点",
+    "emoji": "🇹🇼",
+    "keywords": "(?:台湾|臺灣|Taiwan|TW|TaiWan|Tai-Wan)",
+    "flags": "i"
+  },
+  {
+    "name": "日本节点",
+    "emoji": "🇯🇵",
+    "keywords": "(?:日本|Japan|JP|Tokyo|Osaka|东京|大阪)",
+    "flags": "i"
+  },
+  {
+    "name": "新加坡节点",
+    "emoji": "🇸🇬",
+    "keywords": "(?:新加坡|Singapore|SG|狮城)",
+    "flags": "i"
+  },
+  {
+    "name": "美国节点",
+    "emoji": "🇺🇸",
+    "keywords": "(?:美国|美國|United\\s*States|US|USA|America|San\\s*Jose|Los\\s*Angeles|New\\s*York)",
+    "flags": "i"
+  },
+  {
+    "name": "韩国节点",
+    "emoji": "🇰🇷",
+    "keywords": "(?:韩国|韓國|Korea|KR|Seoul|首尔)",
+    "flags": "i"
+  },
+  {
+    "name": "欧洲节点",
+    "emoji": "🇪🇺",
+    "keywords": "(?:英国|Germany|UK|London|德国|Frankfurt|法国|France|荷兰|Netherlands|EU|欧洲)",
+    "flags": "i"
+  }
+]
