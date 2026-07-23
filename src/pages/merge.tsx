@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { parseClashYaml } from '@/lib/merge/parser';
 import { mergeConfigs } from '@/lib/merge/engine';
 import { getRegionDistribution } from '@/lib/merge/groups';
-import type { MergeStrategy, MergeResult, SourceInput } from '@/types/clash';
+import type { MergeStrategy, MergeResult, SourceInput, RuleMode } from '@/types/clash';
 
 interface ParsedSourceInfo {
   name: string;
@@ -34,6 +34,7 @@ export function MergePage() {
   const [step, setStep] = useState(1);
   const [sources, setSources] = useState<ParsedSourceInfo[]>([]);
   const [strategy, setStrategy] = useState<MergeStrategy>('template');
+  const [ruleMode, setRuleMode] = useState<RuleMode>('rule-set');
   const [mixedPort, setMixedPort] = useState(7890);
   const [allowLan, setAllowLan] = useState(true);
   const [mode, setMode] = useState('rule');
@@ -52,7 +53,6 @@ export function MergePage() {
   const [cloudUrl, setCloudUrl] = useState('');
   const [cloudShortId, setCloudShortId] = useState('');
 
-  // 浏览器端解析 YAML 文件
   const handleFiles = useCallback(async (files: FileList) => {
     for (const file of Array.from(files)) {
       if (!file.name.endsWith('.yml') && !file.name.endsWith('.yaml')) {
@@ -143,7 +143,7 @@ export function MergePage() {
 
       const result = mergeConfigs(sourceInputs, {
         strategy,
-        generalSettings: { mixedPort, allowLan, mode, logLevel },
+        generalSettings: { mixedPort, allowLan, mode, logLevel, ruleMode },
       });
 
       setMergeResult(result);
@@ -157,7 +157,6 @@ export function MergePage() {
     }
   };
 
-  // 获取可覆盖的短链接列表
   const fetchExistingLinks = async () => {
     try {
       const res = await fetch('/api/short-links', { cache: 'no-store' });
@@ -184,7 +183,6 @@ export function MergePage() {
     URL.revokeObjectURL(url);
   };
 
-  // 保存到云端（支持新建或指定覆盖）
   const handleSaveToCloud = async () => {
     if (!mergeResult) return;
     setSavingToCloud(true);
@@ -415,9 +413,9 @@ export function MergePage() {
         {step === 2 && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl sm:text-2xl font-bold mb-2">合并策略</h2>
+              <h2 className="text-xl sm:text-2xl font-bold mb-2">合并策略与规则</h2>
               <p className="text-sm text-muted-foreground">
-                选择代理分组的生成方式
+                选择代理分组生成方式及路由规则格式
               </p>
             </div>
 
@@ -466,6 +464,70 @@ export function MergePage() {
 
             <Separator className="my-4" />
 
+            {/* 规则格式模式选择 (Rule Providers vs Inline) */}
+            <Card className="p-5 sm:p-6 glass border-border/30 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-base">路由规则模式 (Rule Mode)</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    推荐选择 Rule Providers 模式，体积精简且规则在线自动同步
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <label
+                  onClick={() => setRuleMode('rule-set')}
+                  className={`p-3 rounded-lg border flex items-start gap-3 cursor-pointer transition-all ${
+                    ruleMode === 'rule-set'
+                      ? 'border-primary bg-primary/10 text-foreground'
+                      : 'border-border/40 hover:bg-muted/50 text-muted-foreground'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="ruleMode"
+                    checked={ruleMode === 'rule-set'}
+                    onChange={() => setRuleMode('rule-set')}
+                    className="accent-primary mt-1"
+                  />
+                  <div>
+                    <div className="font-medium text-sm flex items-center gap-1.5">
+                      <span>⚡ Rule Providers 模式</span>
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">推荐</Badge>
+                    </div>
+                    <div className="text-xs opacity-70 mt-1 leading-relaxed">
+                      生成 <code className="font-mono text-primary">rule-providers</code> (.mrs 高性能二进制规则集)，体积微小且规则自动在线更新。
+                    </div>
+                  </div>
+                </label>
+
+                <label
+                  onClick={() => setRuleMode('inline')}
+                  className={`p-3 rounded-lg border flex items-start gap-3 cursor-pointer transition-all ${
+                    ruleMode === 'inline'
+                      ? 'border-primary bg-primary/10 text-foreground'
+                      : 'border-border/40 hover:bg-muted/50 text-muted-foreground'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="ruleMode"
+                    checked={ruleMode === 'inline'}
+                    onChange={() => setRuleMode('inline')}
+                    className="accent-primary mt-1"
+                  />
+                  <div>
+                    <div className="font-medium text-sm">📜 经典 Inline 模式</div>
+                    <div className="text-xs opacity-70 mt-1 leading-relaxed">
+                      直接写明逐条 <code className="font-mono">DOMAIN-SUFFIX</code> / <code className="font-mono">IP-CIDR</code> 规则，兼容传统老版 Clash。
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </Card>
+
+            {/* General settings */}
             <Card className="p-5 sm:p-6 glass border-border/30">
               <h3 className="font-semibold mb-4">通用设置</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -603,7 +665,6 @@ export function MergePage() {
               </Tabs>
             </Card>
 
-            {/* 本地下载 */}
             <Card className="p-4 sm:p-5 glass border-border/30">
               <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
                 <div className="flex-1 space-y-2">
@@ -625,7 +686,6 @@ export function MergePage() {
               </div>
             </Card>
 
-            {/* 保存到云端 / 覆盖已有短链接 */}
             <Card className="p-5 glass border-border/30 space-y-4">
               <div>
                 <h3 className="font-semibold text-base flex items-center gap-2">
@@ -637,7 +697,6 @@ export function MergePage() {
                 </p>
               </div>
 
-              {/* 保存模式选项 */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label
                   onClick={() => setSaveMode('new')}
@@ -693,7 +752,6 @@ export function MergePage() {
                 </label>
               </div>
 
-              {/* 覆盖模式选择列表 */}
               {saveMode === 'overwrite' && existingLinks.length > 0 && (
                 <div className="p-3 rounded-lg bg-background/50 border border-border/40 space-y-2">
                   <Label className="text-xs font-semibold">选择要覆盖的短链接 ID：</Label>

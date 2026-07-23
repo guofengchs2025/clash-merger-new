@@ -1,16 +1,17 @@
-import type { MergeStrategy } from '@/types/clash';
-import { TEMPLATE_RULES_BASE } from './templates';
+import type { MergeStrategy, RuleMode } from '@/types/clash';
+import { TEMPLATE_RULES_BASE, TEMPLATE_RULESET_RULES } from './templates';
 
 export function mergeRules(
   strategy: MergeStrategy,
   sourceRulesList: string[][],
-  validGroupNames: Set<string>
+  validGroupNames: Set<string>,
+  ruleMode: RuleMode = 'rule-set'
 ): string[] {
   if (strategy === 'template') {
-    return [...TEMPLATE_RULES_BASE];
+    return ruleMode === 'rule-set' ? [...TEMPLATE_RULESET_RULES] : [...TEMPLATE_RULES_BASE];
   }
 
-  // Preserve 模式：合并多数据源规则并去重，过滤指向失效分组的规则
+  // Preserve 模式：合并多数据源规则并去重
   const ruleSet = new Set<string>();
 
   for (const sourceRules of sourceRulesList) {
@@ -34,7 +35,6 @@ export function mergeRules(
 
   const mergedRules = Array.from(ruleSet);
 
-  // 若最终无有效规则，添加通用兜底 MATCH
   if (mergedRules.length === 0) {
     mergedRules.push('MATCH,DIRECT');
   }

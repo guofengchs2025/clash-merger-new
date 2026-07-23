@@ -28,6 +28,7 @@ export interface ClashConfig {
   'log-level'?: string;
   'external-controller'?: string;
   dns?: Record<string, unknown>;
+  'rule-providers'?: Record<string, unknown>;
   proxies: ProxyNode[];
   'proxy-groups': ProxyGroup[];
   rules: string[];
@@ -35,12 +36,14 @@ export interface ClashConfig {
 }
 
 export type MergeStrategy = 'template' | 'preserve';
+export type RuleMode = 'rule-set' | 'inline';
 
 export interface GeneralSettings {
   mixedPort: number;
   allowLan: boolean;
   mode: string;
   logLevel: string;
+  ruleMode: RuleMode;
 }
 
 export interface MergeOptions {

@@ -3,12 +3,15 @@ import { parseSource, serializeClashYaml } from './parser';
 import { deduplicateProxies } from './dedup';
 import { buildTemplateGroups, buildPreserveGroups, getRegionDistribution } from './groups';
 import { mergeRules } from './rules';
-import { DEFAULT_DNS } from './templates';
+import { DEFAULT_DNS, DEFAULT_RULE_PROVIDERS } from './templates';
 
 export function mergeConfigs(
   sourceInputs: SourceInput[],
   options: MergeOptions
 ): MergeResult {
+  const { strategy, generalSettings } = options;
+  const ruleMode = generalSettings.ruleMode || 'rule-set';
+
   // 1. 解析所有来源
   const parsedSources = sourceInputs.map((input) =>
     parseSource(input.name, input.content, input.type, input.url)
@@ -24,7 +27,7 @@ export function mergeConfigs(
 
   // 3. 构建代理分组
   let proxyGroups;
-  if (options.strategy === 'template') {
+  if (strategy === 'template') {
     proxyGroups = buildTemplateGroups(proxies);
   } else {
     const sourceGroups = parsedSources
@@ -43,20 +46,25 @@ export function mergeConfigs(
     'REJECT',
   ]);
   const sourceRules = parsedSources.map((s) => s.config.rules || []);
-  const rules = mergeRules(options.strategy, sourceRules, validGroupNames);
+  const rules = mergeRules(strategy, sourceRules, validGroupNames, ruleMode);
 
   // 5. 组装最终配置
   const mergedConfig: ClashConfig = {
-    'mixed-port': options.generalSettings.mixedPort,
-    'allow-lan': options.generalSettings.allowLan,
-    mode: options.generalSettings.mode,
-    'log-level': options.generalSettings.logLevel,
+    'mixed-port': generalSettings.mixedPort,
+    'allow-lan': generalSettings.allowLan,
+    mode: generalSettings.mode,
+    'log-level': generalSettings.logLevel,
     'external-controller': '127.0.0.1:9090',
     dns: DEFAULT_DNS,
     proxies,
     'proxy-groups': proxyGroups,
     rules,
   };
+
+  // 如果启用 Rule-Set 模式，注入 rule-providers 字段
+  if (ruleMode === 'rule-set') {
+    mergedConfig['rule-providers'] = DEFAULT_RULE_PROVIDERS;
+  }
 
   // 6. 序列化为 YAML 字符串
   const yamlStr = serializeClashYaml(mergedConfig);

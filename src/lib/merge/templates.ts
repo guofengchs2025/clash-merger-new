@@ -28,6 +28,71 @@ export const DEFAULT_DNS = {
   },
 };
 
+/** 现代 Rule Providers 定义 (Mihomo / Clash Meta 优化版) */
+export const DEFAULT_RULE_PROVIDERS = {
+  reject: {
+    type: 'http',
+    behavior: 'domain',
+    format: 'mrs',
+    url: 'https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ads-all.mrs',
+    path: './ruleset/reject.mrs',
+    interval: 86400,
+  },
+  openai: {
+    type: 'http',
+    behavior: 'domain',
+    format: 'mrs',
+    url: 'https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/openai.mrs',
+    path: './ruleset/openai.mrs',
+    interval: 86400,
+  },
+  telegram: {
+    type: 'http',
+    behavior: 'domain',
+    format: 'mrs',
+    url: 'https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/telegram.mrs',
+    path: './ruleset/telegram.mrs',
+    interval: 86400,
+  },
+  youtube: {
+    type: 'http',
+    behavior: 'domain',
+    format: 'mrs',
+    url: 'https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.mrs',
+    path: './ruleset/youtube.mrs',
+    interval: 86400,
+  },
+  netflix: {
+    type: 'http',
+    behavior: 'domain',
+    format: 'mrs',
+    url: 'https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/netflix.mrs',
+    path: './ruleset/netflix.mrs',
+    interval: 86400,
+  },
+  bilibili: {
+    type: 'http',
+    behavior: 'domain',
+    format: 'mrs',
+    url: 'https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bilibili.mrs',
+    path: './ruleset/bilibili.mrs',
+    interval: 86400,
+  },
+};
+
+/** 使用 Rule Providers 时的标准规则定义 */
+export const TEMPLATE_RULESET_RULES: string[] = [
+  'RULE-SET,reject,🛑 广告拦截',
+  'RULE-SET,openai,🤖 OpenAI',
+  'RULE-SET,telegram,📲 Telegram',
+  'RULE-SET,youtube,📹 油管视频',
+  'RULE-SET,netflix,🎥 奈飞视频',
+  'RULE-SET,bilibili,🎬 哔哩哔哩',
+  'GEOIP,LAN,🎯 全球直连',
+  'GEOIP,CN,🎯 全球直连',
+  'MATCH,🐟 漏网之鱼',
+];
+
 export const TEMPLATE_GROUPS_BASE: Omit<ProxyGroup, 'proxies'>[] = [
   { name: '🚀 节点选择', type: 'select' },
   { name: '♻️ 自动选择', type: 'url-test', url: 'https://www.gstatic.com/generate_204', interval: 300, tolerance: 50 },
@@ -42,6 +107,7 @@ export const TEMPLATE_GROUPS_BASE: Omit<ProxyGroup, 'proxies'>[] = [
   { name: '🐟 漏网之鱼', type: 'select' },
 ];
 
+/** 传统经典 Inline 规则 (逐条 DOMAIN 匹配) */
 export const TEMPLATE_RULES_BASE: string[] = [
   'DOMAIN-KEYWORD,adguard,🛑 广告拦截',
   'DOMAIN-KEYWORD,adaway,🛑 广告拦截',
