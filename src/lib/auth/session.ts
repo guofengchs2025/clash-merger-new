@@ -1,6 +1,6 @@
 /**
- * 会话管理 — HMAC-SHA256 签名 cookie
- * 基于标准 Web Crypto API (浏览器 / Edge / Cloudflare Workers 通用)
+ * 纯无状态会话管理 — HMAC-SHA256 签名 Cookie (Stateless Cookie)
+ * 零 KV 数据库依赖，毫秒级内存校验
  */
 
 /** 生成 SHA-256 哈希 hex 字符串 */
@@ -28,40 +28,39 @@ async function hmacSha256(message: string, secret: string): Promise<string> {
     .join('');
 }
 
-/** 生成 32 字节随机 hex sessionId */
-export function generateSessionId(): string {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  return [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
+/** 构造带有时间戳的 HMAC 签名 Cookie 值 = "<timestamp>.<hmacHex>" */
+export async function signSessionCookie(secret: string): Promise<string> {
+  const timestamp = Date.now().toString();
+  const sig = await hmacSha256(timestamp, secret);
+  return `${timestamp}.${sig}`;
 }
 
-/** 签名 cookie 值 = sessionId + "." + hmacHex */
-export async function signSessionCookie(
-  sessionId: string,
-  secret: string
-): Promise<string> {
-  const sig = await hmacSha256(sessionId, secret);
-  return `${sessionId}.${sig}`;
-}
-
-/** 校验并取出 sessionId；返回 null 表示签名无效 */
+/** 校验签名与过期状态；30 天有效期 */
 export async function verifySessionCookie(
   cookieValue: string,
-  secret: string
-): Promise<string | null> {
+  secret: string,
+  maxAgeMs = 1000 * 60 * 60 * 24 * 30 // 30 天
+): Promise<boolean> {
   const idx = cookieValue.indexOf('.');
-  if (idx < 0) return null;
-  const sessionId = cookieValue.slice(0, idx);
+  if (idx < 0) return false;
+  const timestampStr = cookieValue.slice(0, idx);
   const sig = cookieValue.slice(idx + 1);
-  if (!sessionId || !sig) return null;
-  const expected = await hmacSha256(sessionId, secret);
-  
-  if (sig.length !== expected.length) return null;
+  if (!timestampStr || !sig) return false;
+
+  const timestamp = parseInt(timestampStr, 10);
+  if (isNaN(timestamp)) return false;
+
+  // 检查是否过期
+  if (Date.now() - timestamp > maxAgeMs) return false;
+
+  const expected = await hmacSha256(timestampStr, secret);
+  if (sig.length !== expected.length) return false;
+
   let diff = 0;
   for (let i = 0; i < sig.length; i++) {
     diff |= sig.charCodeAt(i) ^ expected.charCodeAt(i);
   }
-  return diff === 0 ? sessionId : null;
+  return diff === 0;
 }
 
 /** 构造 Set-Cookie 头 (HttpOnly, SameSite=Lax) */

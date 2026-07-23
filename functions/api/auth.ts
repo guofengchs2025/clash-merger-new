@@ -1,20 +1,18 @@
 import {
   buildClearCookie,
   buildSetCookie,
-  generateSessionId,
   sha256Hex,
   signSessionCookie,
   verifySessionCookie,
 } from '../../src/lib/auth/session';
 
 interface Env {
-  AUTH_KV?: any;
   AUTH_SECRET?: string;
-  AUTH_PASSWORD?: string; // 明文密码 (优先)
+  AUTH_PASSWORD?: string; // 明文密码 (推荐)
   AUTH_PASSWORD_HASH?: string; // SHA-256 哈希密码
 }
 
-/** 从 Request 读取指定 Cookie 值 */
+/** 从 Request 读取 Cookie 值 */
 function getCookie(request: Request, name: string): string | null {
   const cookieHeader = request.headers.get('Cookie');
   if (!cookieHeader) return null;
@@ -26,7 +24,7 @@ function getCookie(request: Request, name: string): string | null {
   return null;
 }
 
-/** GET /api/auth — 查询登录状态 */
+/** GET /api/auth — 校验登录状态 (纯内存无状态校验) */
 export async function onRequestGet(context: { request: Request; env: Env }) {
   const { request, env } = context;
   const secret = env.AUTH_SECRET;
@@ -39,26 +37,13 @@ export async function onRequestGet(context: { request: Request; env: Env }) {
     headers: { 'Content-Type': 'application/json' },
   });
 
-  const sessionId = await verifySessionCookie(cookieValue, secret);
-  if (!sessionId) return new Response(JSON.stringify({ authenticated: false }), {
-    headers: { 'Content-Type': 'application/json' },
-  });
-
-  const kv = env.AUTH_KV;
-  if (kv) {
-    const val = await kv.get(`session:${sessionId}`);
-    return new Response(JSON.stringify({ authenticated: val !== null }), {
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  // 无 KV 的本地 fallback
-  return new Response(JSON.stringify({ authenticated: true }), {
+  const valid = await verifySessionCookie(cookieValue, secret);
+  return new Response(JSON.stringify({ authenticated: valid }), {
     headers: { 'Content-Type': 'application/json' },
   });
 }
 
-/** POST /api/auth — 登录处理 */
+/** POST /api/auth — 登录校验 */
 export async function onRequestPost(context: { request: Request; env: Env }) {
   const { request, env } = context;
   try {
@@ -89,10 +74,8 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
 
     let isValid = false;
     if (storedPlain) {
-      // 方式 1: 直接填写明文密码时，在边缘节点进行安全比对
       isValid = password === storedPlain;
     } else if (storedHash) {
-      // 方式 2: 填写哈希值时，将输入密码计算 SHA-256 后比对
       const inputHash = await sha256Hex(password);
       isValid = inputHash === storedHash;
     }
@@ -104,15 +87,8 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
       });
     }
 
-    const sessionId = generateSessionId();
-    const kv = env.AUTH_KV;
-    if (kv) {
-      await kv.put(`session:${sessionId}`, new Date().toISOString(), {
-        expirationTtl: 60 * 60 * 24 * 30, // 30 天后自动失效
-      });
-    }
-
-    const cookieValue = await signSessionCookie(sessionId, env.AUTH_SECRET);
+    // 签署无状态 Cookie
+    const cookieValue = await signSessionCookie(env.AUTH_SECRET);
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
       headers: {
@@ -129,18 +105,7 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
 }
 
 /** DELETE /api/auth — 退出登录 */
-export async function onRequestDelete(context: { request: Request; env: Env }) {
-  const { request, env } = context;
-  const secret = env.AUTH_SECRET;
-  const cookieValue = getCookie(request, 'clash_session');
-
-  if (cookieValue && secret) {
-    const sessionId = await verifySessionCookie(cookieValue, secret);
-    if (sessionId && env.AUTH_KV) {
-      await env.AUTH_KV.delete(`session:${sessionId}`);
-    }
-  }
-
+export async function onRequestDelete() {
   return new Response(JSON.stringify({ ok: true }), {
     status: 200,
     headers: {
