@@ -30,19 +30,48 @@ export function buildTemplateGroups(proxies: ProxyNode[]): ProxyGroup[] {
     regionProxiesMap.get(groupName)!.push(proxy.name);
   }
 
-  // 生成地区 select 分组
+  // 生成地区分组：为每个地区自动产生 select (主组) + url-test (自动选择) + fallback (故障转移)
   const regionGroups: ProxyGroup[] = [];
+  const mainRegionGroupNames: string[] = [];
+
   for (const [name, proxyList] of regionProxiesMap.entries()) {
     if (proxyList.length > 0) {
-      regionGroups.push({
+      const urlTestName = `${name} - 自动选择`;
+      const fallbackName = `${name} - 故障转移`;
+
+      // 1) 自动选择组 (url-test)
+      const urlTestGroup: ProxyGroup = {
+        name: urlTestName,
+        type: 'url-test',
+        proxies: proxyList,
+        url: 'http://www.gstatic.com/generate_204',
+        interval: 300,
+        tolerance: 50,
+      };
+
+      // 2) 故障转移组 (fallback)
+      const fallbackGroup: ProxyGroup = {
+        name: fallbackName,
+        type: 'fallback',
+        proxies: proxyList,
+        url: 'http://www.gstatic.com/generate_204',
+        interval: 300,
+        timeout: 5000,
+      };
+
+      // 3) 手动选择主组 (select)，优先放自动选择和故障转移选项
+      const mainSelectGroup: ProxyGroup = {
         name,
         type: 'select',
-        proxies: proxyList,
-      });
+        proxies: [urlTestName, fallbackName, ...proxyList],
+      };
+
+      regionGroups.push(mainSelectGroup, urlTestGroup, fallbackGroup);
+      mainRegionGroupNames.push(name);
     }
   }
 
-  const activeRegionGroupNames = regionGroups.map((g) => g.name);
+  const activeRegionGroupNames = mainRegionGroupNames;
 
   // 基础策略组
   const baseGroups: ProxyGroup[] = TEMPLATE_GROUPS_BASE.map((tmpl) => {
