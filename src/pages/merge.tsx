@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -14,6 +14,7 @@ import { parseClashYaml } from '@/lib/merge/parser';
 import { mergeConfigs } from '@/lib/merge/engine';
 import { getRegionDistribution } from '@/lib/merge/groups';
 import { loadRuleProviders, buildRuleProvidersConfig } from '@/lib/providers/store';
+import { loadUserSettings, saveUserSettings } from '@/lib/settings/store';
 import type { MergeStrategy, MergeResult, SourceInput, RuleMode } from '@/types/clash';
 
 interface ParsedSourceInfo {
@@ -54,6 +55,19 @@ export function MergePage() {
   const [savingToCloud, setSavingToCloud] = useState(false);
   const [cloudUrl, setCloudUrl] = useState('');
   const [cloudShortId, setCloudShortId] = useState('');
+
+  // 页面挂载时读取从 KV/localStorage 保存的用户合并偏好与过滤配置
+  useEffect(() => {
+    loadUserSettings().then((settings) => {
+      setStrategy(settings.strategy);
+      setRuleMode(settings.ruleMode);
+      setFilterRegex(settings.filterRegex);
+      setMixedPort(settings.mixedPort);
+      setAllowLan(settings.allowLan);
+      setMode(settings.mode);
+      setLogLevel(settings.logLevel);
+    });
+  }, []);
 
   const handleFiles = useCallback(async (files: FileList) => {
     for (const file of Array.from(files)) {
@@ -136,6 +150,19 @@ export function MergePage() {
 
   const handleMerge = async () => {
     try {
+      const currentSettings = {
+        strategy,
+        ruleMode,
+        filterRegex,
+        mixedPort,
+        allowLan,
+        mode,
+        logLevel,
+      };
+
+      // 自动保存用户的合并策略与过滤正则表达式到云端 KV 及本地
+      saveUserSettings(currentSettings);
+
       const sourceInputs: SourceInput[] = sources.map((s) => ({
         name: s.name,
         type: s.type,
@@ -155,7 +182,7 @@ export function MergePage() {
 
       const result = mergeConfigs(sourceInputs, {
         strategy,
-        generalSettings: { mixedPort, allowLan, mode, logLevel, ruleMode, filterRegex },
+        generalSettings: currentSettings,
         customRuleProviders,
         customRules,
       });
@@ -164,7 +191,7 @@ export function MergePage() {
       setStep(3);
       setCloudUrl('');
       setCloudShortId('');
-      toast.success('合并成功！');
+      toast.success('合并成功！已自动保存配置与过滤偏好');
       fetchExistingLinks();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '合并失败');
@@ -487,7 +514,7 @@ export function MergePage() {
                     <span>节点关键字正则过滤 (Node Filtering)</span>
                   </h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    名字匹配该正则表达式的节点将被自动过滤剔除（例如：测试|重置|官网|流量）
+                    名字匹配该正则表达式的节点将被自动过滤剔除（设置会自动保存至云端 KV）
                   </p>
                 </div>
               </div>
