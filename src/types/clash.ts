@@ -44,6 +44,7 @@ export interface GeneralSettings {
   mode: string;
   logLevel: string;
   ruleMode: RuleMode;
+  filterRegex?: string; // 节点过滤正则表达式
 }
 
 export interface MergeOptions {
@@ -55,6 +56,7 @@ export interface MergeOptions {
 
 export interface MergeStats {
   totalProxies: number;
+  filteredProxies: number;
   dedupedProxies: number;
   groupCount: number;
   ruleCount: number;

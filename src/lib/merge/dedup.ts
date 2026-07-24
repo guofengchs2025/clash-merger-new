@@ -8,10 +8,12 @@ export function getProxyFingerprint(proxy: ProxyNode): string {
 }
 
 export function deduplicateProxies(
-  sources: { sourceName: string; proxies: ProxyNode[] }[]
+  sources: { sourceName: string; proxies: ProxyNode[] }[],
+  filterRegexPattern?: string
 ): {
   proxies: ProxyNode[];
   totalBefore: number;
+  totalFiltered: number;
   totalAfter: number;
   proxyMapping: Map<string, string>; // originalName -> deduplicatedName
 } {
@@ -20,11 +22,27 @@ export function deduplicateProxies(
   const nameCountMap = new Map<string, number>();
 
   let totalBefore = 0;
+  let totalFiltered = 0;
+
+  let filterRegex: RegExp | null = null;
+  if (filterRegexPattern && filterRegexPattern.trim()) {
+    try {
+      filterRegex = new RegExp(filterRegexPattern.trim(), 'i');
+    } catch {
+      // 无效正则表达式则不触发过滤
+    }
+  }
 
   for (const source of sources) {
     totalBefore += source.proxies.length;
 
     for (const proxy of source.proxies) {
+      // 1. 如果匹配过滤正则表达式，直接踢除
+      if (filterRegex && filterRegex.test(proxy.name)) {
+        totalFiltered++;
+        continue;
+      }
+
       const fp = getProxyFingerprint(proxy);
 
       if (seenFingerprints.has(fp)) {
@@ -58,6 +76,7 @@ export function deduplicateProxies(
   return {
     proxies,
     totalBefore,
+    totalFiltered,
     totalAfter: proxies.length,
     proxyMapping,
   };

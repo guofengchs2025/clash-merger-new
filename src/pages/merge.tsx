@@ -36,6 +36,7 @@ export function MergePage() {
   const [sources, setSources] = useState<ParsedSourceInfo[]>([]);
   const [strategy, setStrategy] = useState<MergeStrategy>('template');
   const [ruleMode, setRuleMode] = useState<RuleMode>('rule-set');
+  const [filterRegex, setFilterRegex] = useState('测试|重置|官网|到期|流量|traffic|expire|remaining');
   const [mixedPort, setMixedPort] = useState(7890);
   const [allowLan, setAllowLan] = useState(true);
   const [mode, setMode] = useState('rule');
@@ -142,7 +143,6 @@ export function MergePage() {
         url: s.url,
       }));
 
-      // 读取最新存储在 KV/store 中的自定义 rule-providers
       let customRuleProviders: Record<string, unknown> | undefined;
       let customRules: string[] | undefined;
 
@@ -155,7 +155,7 @@ export function MergePage() {
 
       const result = mergeConfigs(sourceInputs, {
         strategy,
-        generalSettings: { mixedPort, allowLan, mode, logLevel, ruleMode },
+        generalSettings: { mixedPort, allowLan, mode, logLevel, ruleMode, filterRegex },
         customRuleProviders,
         customRules,
       });
@@ -423,13 +423,13 @@ export function MergePage() {
           </div>
         )}
 
-        {/* Step 2: 策略选择 */}
+        {/* Step 2: 策略与过滤设置 */}
         {step === 2 && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl sm:text-2xl font-bold mb-2">合并策略与规则</h2>
+              <h2 className="text-xl sm:text-2xl font-bold mb-2">合并策略与过滤</h2>
               <p className="text-sm text-muted-foreground">
-                选择代理分组生成方式及路由规则格式
+                选择代理分组生成方式、剔除无用节点及路由规则格式
               </p>
             </div>
 
@@ -453,7 +453,7 @@ export function MergePage() {
                 </div>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   自动按地区归类节点（🇭🇰 香港 / 🇺🇸 美国 / 🇯🇵 日本...），
-                  生成标准代理分组和分流规则。适合大多数用户。
+                  为每个地区自动产生手动/自动选择/故障转移三组。
                 </p>
               </Card>
 
@@ -478,6 +478,34 @@ export function MergePage() {
 
             <Separator className="my-4" />
 
+            {/* 🪠 节点正则过滤配置卡片 */}
+            <Card className="p-5 sm:p-6 glass border-border/30 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-base flex items-center gap-2">
+                    <span>🪠</span>
+                    <span>节点关键字正则过滤 (Node Filtering)</span>
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    名字匹配该正则表达式的节点将被自动过滤剔除（例如：测试|重置|官网|流量）
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-1">
+                <Input
+                  value={filterRegex}
+                  onChange={(e) => setFilterRegex(e.target.value)}
+                  placeholder="如: 测试|重置|官网|到期"
+                  className="font-mono text-sm bg-background/50"
+                />
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  提示：支持 JavaScript RegExp 正则表达（如 <code className="font-mono text-primary">测试|重置</code> 表示名字中包含“测试”或“重置”的节点会被自动清理；留空则不触发过滤）。
+                </p>
+              </div>
+            </Card>
+
+            {/* 规则格式模式选择 */}
             <Card className="p-5 sm:p-6 glass border-border/30 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -612,10 +640,11 @@ export function MergePage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               {[
                 { label: '原始节点', value: mergeResult.stats.totalProxies, icon: '📊' },
-                { label: '去重后', value: mergeResult.stats.dedupedProxies, icon: '✨' },
+                { label: '过滤踢除', value: mergeResult.stats.filteredProxies, icon: '🪠' },
+                { label: '去重保留', value: mergeResult.stats.dedupedProxies, icon: '✨' },
                 { label: '代理分组', value: mergeResult.stats.groupCount, icon: '📂' },
                 { label: '路由规则', value: mergeResult.stats.ruleCount, icon: '📋' },
               ].map((stat) => (

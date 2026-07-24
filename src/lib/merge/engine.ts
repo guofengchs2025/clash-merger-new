@@ -11,19 +11,23 @@ export function mergeConfigs(
 ): MergeResult {
   const { strategy, generalSettings, customRuleProviders, customRules } = options;
   const ruleMode = generalSettings.ruleMode || 'rule-set';
+  const filterRegex = generalSettings.filterRegex;
 
   // 1. 解析所有来源
   const parsedSources = sourceInputs.map((input) =>
     parseSource(input.name, input.content, input.type, input.url)
   );
 
-  // 2. 提取并去重代理
+  // 2. 提取、正则过滤并去重代理
   const proxiesBySource = parsedSources.map((s) => ({
     sourceName: s.name,
     proxies: s.config.proxies,
   }));
 
-  const { proxies, totalBefore, totalAfter, proxyMapping } = deduplicateProxies(proxiesBySource);
+  const { proxies, totalBefore, totalFiltered, totalAfter, proxyMapping } = deduplicateProxies(
+    proxiesBySource,
+    filterRegex
+  );
 
   // 3. 构建代理分组
   let proxyGroups;
@@ -82,6 +86,7 @@ export function mergeConfigs(
     yaml: yamlStr,
     stats: {
       totalProxies: totalBefore,
+      filteredProxies: totalFiltered,
       dedupedProxies: totalAfter,
       groupCount: proxyGroups.length,
       ruleCount: rules.length,
